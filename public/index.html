@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AlagaViz</title>
+  <meta name="description" content="Sinalize e consulte pontos de alagamento na sua cidade, em tempo real, pelo mapa.">
+  <meta name="theme-color" content="#0b3a52">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><use href="#drop"/></svg>
+      <span>AlagaViz</span>
+    </div>
+    <label class="search">
+      <span class="sr">Buscar relatos</span>
+      <input id="q" type="search" placeholder="Buscar bairro, rua ou título" autocomplete="off">
+    </label>
+    <span id="net" class="net" role="status">online</span>
+    <button id="install" class="ghost" hidden>Instalar</button>
+    <button id="account" class="ghost" type="button">Entrar</button>
+  </header>
+
+  <div id="banner" class="banner" role="status" hidden></div>
+
+  <main class="layout">
+    <section class="mapwrap" aria-label="Mapa de alagamentos">
+      <div id="map"></div>
+      <div class="legend" aria-label="Legenda de gravidade">
+        <span><i style="--c:var(--low)">1</i>Baixa</span>
+        <span><i style="--c:var(--mod)">2</i>Moderada</span>
+        <span><i style="--c:var(--high)">3</i>Alta</span>
+        <span><i style="--c:var(--crit)">!</i>Crítica</span>
+      </div>
+      <div id="pickbar" class="pickbar" hidden>
+        <strong>Toque no mapa</strong> no local do alagamento
+        <button id="pickcancel" type="button">Cancelar</button>
+      </div>
+      <article id="detail" class="detail" hidden></article>
+      <button id="fab" class="fab" type="button">
+        <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><use href="#drop"/></svg>
+        Sinalizar alagamento
+      </button>
+    </section>
+
+    <aside id="panel" class="panel" aria-label="Relatos">
+      <button id="sheet" class="handle" type="button" aria-expanded="false">
+        <span class="bar"></span>
+        <span id="count">Relatos</span>
+      </button>
+      <div class="filters">
+        <label>Gravidade
+          <select id="fsev"><option value="">Todas</option><option value="low">Baixa</option><option value="moderate">Moderada</option><option value="high">Alta</option><option value="critical">Crítica</option></select>
+        </label>
+        <label>Situação
+          <select id="fsta"><option value="">Todas</option><option value="reported">Relato recebido</option><option value="monitoring">Em acompanhamento</option><option value="resolved">Água baixou</option></select>
+        </label>
+      </div>
+      <ul id="list" class="list"></ul>
+      <p class="note">Relatos de usuários, <b>não verificados</b> e sem valor de alerta oficial. Nunca atravesse áreas alagadas. Emergência: <b>193</b> (Bombeiros) · <b>199</b> (Defesa Civil).</p>
+      <p class="note"><button id="mod" type="button" class="link">Sou moderador</button></p>
+    </aside>
+  </main>
+
+  <dialog id="dlg">
+    <form id="form" method="dialog" novalidate>
+      <h2 id="formTitle">Sinalizar alagamento</h2>
+
+      <fieldset class="loc">
+        <legend>Local</legend>
+        <p id="locsum" class="locsum">—</p>
+        <div class="row">
+          <button type="button" id="pickmap">Marcar no mapa</button>
+          <button type="button" id="geo">Usar minha localização</button>
+        </div>
+        <details>
+          <summary>Digitar coordenadas</summary>
+          <div class="row">
+            <label>Latitude <input id="lat" inputmode="decimal" placeholder="-23.5505"></label>
+            <label>Longitude <input id="lng" inputmode="decimal" placeholder="-46.6333"></label>
+          </div>
+        </details>
+      </fieldset>
+
+      <fieldset class="sev">
+        <legend>Gravidade</legend>
+        <label><input type="radio" name="sev" value="low"><span style="--c:var(--low)"><i>1</i>Baixa<small>poça, passa devagar</small></span></label>
+        <label><input type="radio" name="sev" value="moderate" checked><span style="--c:var(--mod)"><i>2</i>Moderada<small>água na via</small></span></label>
+        <label><input type="radio" name="sev" value="high"><span style="--c:var(--high)"><i>3</i>Alta<small>difícil passar</small></span></label>
+        <label><input type="radio" name="sev" value="critical"><span style="--c:var(--crit)"><i>!</i>Crítica<small>intransitável</small></span></label>
+      </fieldset>
+
+      <label>Título <input id="title" maxlength="80" required placeholder="Ex.: Rua totalmente alagada"></label>
+      <label>Descrição <small>(opcional)</small><textarea id="desc" maxlength="500" rows="2" placeholder="O que você está vendo?"></textarea></label>
+      <div class="row">
+        <label>Bairro <small>(opcional)</small><input id="nbh" maxlength="60"></label>
+        <label>Rua / referência <small>(opcional)</small><input id="addr" maxlength="120"></label>
+      </div>
+      <p id="err" class="err" role="alert" hidden></p>
+      <p class="note">Seu nome e e-mail não aparecem no relato. Sua localização só é usada se você tocar em “Usar minha localização”.</p>
+      <div class="actions">
+        <button type="button" id="cancel" class="ghost">Cancelar</button>
+        <button type="submit" id="send" class="primary">Enviar relato</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="authDlg">
+    <form id="authForm" method="dialog" novalidate>
+      <h2 id="authTitle">Entrar</h2>
+      <p id="authMsg" class="note">Entre com seu e-mail e senha.</p>
+      <label id="nameRow" hidden>Nome <input id="aname" maxlength="60" autocomplete="name"></label>
+      <label>E-mail <input id="aemail" type="email" maxlength="120" autocomplete="email" required></label>
+      <label>Senha <small>(mínimo 6 caracteres)</small><input id="apass" type="password" maxlength="100" autocomplete="current-password" required></label>
+      <p id="authErr" class="err" role="alert" hidden></p>
+      <div class="actions">
+        <button type="button" id="authCancel" class="ghost">Cancelar</button>
+        <button type="submit" id="authSend" class="primary">Entrar</button>
+      </div>
+      <p class="note"><button type="button" id="authSwitch" class="link">Não tem conta? Cadastre-se</button></p>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="drop" viewBox="0 0 32 32"><path d="M16 3C11 10 7 14.6 7 19.5A9 9 0 0 0 25 19.5C25 14.6 21 10 16 3Z" fill="currentColor"/><path d="M4 28c3 0 3-1.8 6-1.8s3 1.8 6 1.8 3-1.8 6-1.8 3 1.8 6 1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <script src="/map.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
